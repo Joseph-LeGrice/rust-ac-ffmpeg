@@ -2,6 +2,7 @@
 //! code examples.
 
 pub mod codec;
+pub mod filter;
 pub mod format;
 pub mod packet;
 pub mod time;

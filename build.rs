@@ -18,6 +18,7 @@ fn main() {
         .file("src/format/demuxer.c")
         .file("src/format/io.c")
         .file("src/format/muxer.c")
+        .file("src/filter/mod.c")
         .file("src/codec/bsf.c")
         .file("src/codec/mod.c")
         .file("src/codec/frame.c")
@@ -35,6 +36,7 @@ fn main() {
 
     link("avcodec", ffmpeg_link_mode);
     link("avformat", ffmpeg_link_mode);
+    link("avfilter", ffmpeg_link_mode);
     link("avutil", ffmpeg_link_mode);
     link("swresample", ffmpeg_link_mode);
     link("swscale", ffmpeg_link_mode);
