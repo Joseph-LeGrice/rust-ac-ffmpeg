@@ -9,7 +9,7 @@ use std::{ffi::CString, ptr};
 use libc::c_void;
 
 use crate::{
-    codec::{AudioCodecParameters, CodecError, CodecParameters, Decoder, Encoder},
+    codec::{AudioCodecParameters, CodecError, CodecParameters, Decoder, Encoder, Frame},
     packet::Packet,
     time::TimeBase,
     Error,

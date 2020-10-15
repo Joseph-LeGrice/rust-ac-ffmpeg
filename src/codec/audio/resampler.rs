@@ -8,6 +8,7 @@ use crate::{
     codec::{
         audio::{AudioFrame, ChannelLayout, SampleFormat},
         CodecError,
+        Frame,
     },
     time::TimeBase,
     Error,

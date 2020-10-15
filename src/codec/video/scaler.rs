@@ -3,7 +3,10 @@
 use libc::{c_int, c_void, size_t};
 
 use crate::{
-    codec::video::{PixelFormat, VideoFrame},
+    codec::{
+        Frame,
+        video::{PixelFormat, VideoFrame}
+    },
     Error,
 };
 

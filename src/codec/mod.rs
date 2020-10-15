@@ -838,3 +838,7 @@ pub trait Encoder {
     /// Take the next packet from the encoder.
     fn take(&mut self) -> Result<Option<Packet>, Error>;
 }
+
+pub(crate) trait Frame {
+    fn as_ptr(&self) -> *mut c_void;
+}

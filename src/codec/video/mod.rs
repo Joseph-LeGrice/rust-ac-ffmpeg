@@ -8,7 +8,7 @@ use std::{ffi::CString, ptr};
 use libc::c_void;
 
 use crate::{
-    codec::{CodecError, CodecParameters, Decoder, Encoder, VideoCodecParameters},
+    codec::{CodecError, CodecParameters, Decoder, Encoder, Frame, VideoCodecParameters},
     packet::Packet,
     time::TimeBase,
     Error,
