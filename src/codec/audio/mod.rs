@@ -186,6 +186,10 @@ impl Decoder for AudioDecoder {
         params.into_audio_codec_parameters().unwrap()
     }
 
+    fn time_base(&self) -> TimeBase {
+        self.time_base
+    }
+
     fn try_push(&mut self, packet: Packet) -> Result<(), CodecError> {
         let packet = packet.with_time_base(self.time_base);
 

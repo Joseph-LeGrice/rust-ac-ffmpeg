@@ -68,7 +68,7 @@ impl ChannelLayout {
     }
 
     /// Get the raw representation.
-    pub(crate) fn into_raw(self) -> u64 {
+    pub fn into_raw(self) -> u64 {
         let Self(layout) = self;
 
         layout

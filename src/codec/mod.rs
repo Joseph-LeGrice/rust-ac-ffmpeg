@@ -18,6 +18,7 @@ use crate::{
         video::PixelFormat,
     },
     packet::Packet,
+    time::TimeBase,
     Error,
 };
 
@@ -768,6 +769,9 @@ pub trait Decoder {
     /// Get codec parameters.
     fn codec_parameters(&self) -> Self::CodecParameters;
 
+    /// Get the decoder's time_base.
+    fn time_base(&self) -> TimeBase;
+    
     /// Push a given packet to the decoder.
     ///
     /// # Panics

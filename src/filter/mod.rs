@@ -1,46 +1,71 @@
 use std::{
     ffi::CString,
+    ptr,
 };
 
 use libc::{c_char, c_int, c_uint, c_void};
 
 use crate::{
+    codec::{
+        audio::{AudioDecoder, AudioFrame},
+        Decoder,
+        Frame,
+    },
     Error,
+    time::TimeBase,
 };
 
 extern "C" {
     fn ffw_filter_graph_init() -> *mut c_void;
-    fn ffw_filter_graph_config(fg: *mut c_void) -> c_int;
-    fn ffw_filter_graph_free(fg: *mut c_void);
+    fn ffw_filter_graph_config(filter_graph: *mut c_void) -> c_int;
+    fn ffw_filter_graph_free(filter_graph: *mut c_void);
 
-    fn ffw_filter_alloc(fg: *mut c_void,  name: *const c_char) -> *mut c_void;
+    fn ffw_filter_alloc(filter_graph: *mut c_void,  name: *const c_char) -> *mut c_void;
     fn ffw_filter_init(filter: *mut c_void)  -> c_int;
     fn ffw_filter_set_initial_option(filter: *mut c_void,  key: *const c_char, value: *const c_char) -> c_int;
     fn ffw_filter_link(filter_a: *mut c_void,  output: c_uint, filter_b: *mut c_void, input: c_uint ) -> c_int;
+    fn ffw_filter_push_frame(src_filter: *mut c_void, frame: *mut c_void) -> c_int;
+    fn ffw_filter_take_frame(sink_filter: *mut c_void, frame: *mut *mut c_void) -> c_int;
     fn ffw_filter_free(name: *mut c_void);
 }
 
 /// A Filter Graph Builder
 pub struct FilterGraphBuilder {
     ptr: *mut c_void,
+    buffer_src: Option<Filter>,
+    buffer_sink: Option<Filter>,
+    time_base: TimeBase,
     should_drop_graph: bool,
 }
 
 impl FilterGraphBuilder {
     /// Create a new FilterGraphBuilder.
-    pub fn new() -> Result<Self, Error> {
+    pub fn new(audio_decoder: &AudioDecoder) -> Result<Self, Error> {
         let ptr = unsafe { ffw_filter_graph_init() as *mut c_void };
 
         if ptr.is_null() {
             return Err(Error::new("out of memory"));
         }
-        
+
+        let time_base = audio_decoder.time_base();
+
         let res = FilterGraphBuilder {
             ptr,
+            buffer_src: None,
+            buffer_sink: None,
+            time_base,
             should_drop_graph: true,
         };
         
         Ok(res)
+    }
+
+    pub fn set_buffer_src(&mut self, buffer_src: Filter) {
+        self.buffer_src = Some(buffer_src);
+    }
+
+    pub fn set_buffer_sink(&mut self, buffer_sink: Filter) {
+        self.buffer_sink = Some(buffer_sink);
     }
 
     /// Create a new FilterBuilder for a `filter_type` filter.
@@ -73,9 +98,12 @@ impl FilterGraphBuilder {
         }
 
         self.should_drop_graph = false;
-
+        
         let res = FilterGraph {
             ptr: self.ptr,
+            src: self.buffer_src.take().expect("No Buffer Source was set!"),
+            sink: self.buffer_sink.take().expect("No Buffer Sink was set!"),
+            time_base: self.time_base,
             _filters: filters,
         };
 
@@ -94,12 +122,46 @@ impl Drop for FilterGraphBuilder {
 /// A Filter Graph
 pub struct FilterGraph {
     ptr: *mut c_void,
+    src: Filter,
+    sink: Filter,
+    time_base: TimeBase,
     _filters: Vec<Filter>,
 }
 
 impl FilterGraph {
-    pub fn builder() -> Result<FilterGraphBuilder, Error> {
-        FilterGraphBuilder::new()
+    pub fn builder(audio_decoder: &AudioDecoder) -> Result<FilterGraphBuilder, Error> {
+        FilterGraphBuilder::new(audio_decoder)
+    }
+
+    /// Take a frame to the FilterGraph
+    pub fn push(&self, frame: AudioFrame) -> Result<(), Error> {
+        unsafe {
+            let ret = ffw_filter_push_frame(self.src.ptr, frame.as_ptr());
+
+            if ret < 0 {
+                return Err(Error::from_raw_error_code(ret));
+            }
+        }
+        Ok(())
+    }
+
+    /// Take a frame from the FilterGraph. This should be called until `None` is returned.
+    pub fn take(&self) -> Result<Option<AudioFrame>, Error> {
+        let mut fptr = ptr::null_mut();
+
+        unsafe {
+            match ffw_filter_take_frame(self.sink.ptr, &mut fptr) {
+                1 => {
+                    if fptr.is_null() {
+                        panic!("no frame received")
+                    } else {
+                        Ok(Some(AudioFrame::from_raw_ptr(fptr, self.time_base)))
+                    }
+                },
+                0 => Ok(None),
+                e => Err(Error::from_raw_error_code(e))
+            }
+        }
     }
 }
 
